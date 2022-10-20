@@ -5,51 +5,32 @@ import ddf.minim.analysis.*;
 import ddf.minim.ugens.*;
 import ddf.minim.effects.*;
 
-
-
 Minim minim;
 AudioOutput out;
 
+//テンポと拍数
 int bpm = 160;
 int beat = 16;
 int count = 0;
 
-boolean[] playable;
-boolean[] buttonTrigger;
 
-SyntheInterface base_buttons;
+Beats beats;
 
-String[] pitch_list = {"C4", "F4", "G4", "C4", "C4", "F4", "G4", "C4", "C4", "F4", "G4", "C4", "C4", "F4", "G4", "C4"};
-
-Beats[] beats;
 
 void setup(){
   size(displayWidth, displayHeight);
   pixelDensity(displayDensity());
 
 
-  playable = new boolean[beat];
-  buttonTrigger = new boolean[beat];
-
-
-  base_buttons = new SyntheInterface(16, 50, 20);
-  base_buttons.calcButtonPos();
-  base_buttons.dispButtons();
-
+  beats = new Beats("A4");
+  beats.calcButtonPos();
+  beats.dispButtons();
 
   minim = new Minim(this);
   out = minim.getLineOut(Minim.STEREO);
   out.setTempo(bpm);
 
-  // Beats bass = new Beats("A1");
-
-  // beats = new Beats[4];
-  // beats[0] = new Beats("A1");
-
-  out.playNote(0, 0.25, new Beats("A4"));
-  
-
- 
+  out.playNote(0, 0.25, beats);
 }
 
 
@@ -60,25 +41,34 @@ void draw(){
   strokeWeight(1);
   strokeCap(SQUARE);
 
-  base_buttons.dispButtons();
+  beats.dispButtons();
   dispWave();
 
-  fill(01);
+  fill(0);
   text("BASS", 10, 35);
   textSize(36);
 }
 
 
-class Beats implements Instrument {
+class Beats extends SyntheInterface implements Instrument {
   String pitch;
+  boolean[] playable;
+
   Beats(String pitch){
+    //親クラスのコンストラクタ
+    super(16, 50, 20);
+
     this.pitch = pitch;
+    playable = new boolean[beat];
+    for(int i = 0; i < beat; i++) {
+      playable[i] = false;
+    }
+    
   }
 
   void noteOn(float duration){
     playable[count] = (buttonTrigger[count])?true:false;
-    
-    if(playable[count]) out.playNote(0, 0.25, new Synthe(pitch_list[count]));
+    if(playable[count]) out.playNote(0, 0.25, new Synthe(pitch));
   }
   
   void noteOff(){
@@ -111,16 +101,22 @@ class Synthe implements Instrument {
 }
 
 
-class SyntheInterface {
+class SyntheInterface{
   int button_width, button_num, margin, button_margin;
+  boolean[] buttonTrigger;
   PVector[][] button_pos;
 
   SyntheInterface(int button_num, int margin, int button_margin){
+    buttonTrigger = new boolean[beat];
+
     button_width = (displayWidth-(margin*2)-(button_margin*(button_num-1)))/button_num;
     this.button_num = button_num;
     this.margin = margin;
     this.button_margin = button_margin;
-    for(int i = 0; i < this.button_num; i++) buttonTrigger[i] = false;
+    
+    for(int i = 0; i < this.button_num; i++){
+      buttonTrigger[i] = false;
+    }
   }
 
   void calcButtonPos() { 
@@ -152,7 +148,7 @@ class SyntheInterface {
 }
 
 void mousePressed() {
-  base_buttons.getClick();
+  beats.getClick();
 }
 
 void dispWave(){
