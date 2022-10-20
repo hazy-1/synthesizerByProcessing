@@ -11,26 +11,27 @@ AudioOutput out;
 //テンポと拍数
 int bpm = 160;
 int beat = 16;
-int count = 0;
+int count = 0;  
 
 
-Beats beats;
+Beats[] beats;
+Beats beattest;
+Synthesizer synthe;
+
+String[] pitchList = {"C#4", "D#4", "F#4", "G#4", "A#4"};
 
 
 void setup(){
   size(displayWidth, displayHeight);
   pixelDensity(displayDensity());
 
-
-  beats = new Beats("A4");
-  beats.calcButtonPos();
-  beats.dispButtons();
-
   minim = new Minim(this);
   out = minim.getLineOut(Minim.STEREO);
   out.setTempo(bpm);
 
-  out.playNote(0, 0.25, beats);
+  synthe = new Synthesizer();
+
+  synthe.setSyntheSounds();
 }
 
 
@@ -41,12 +42,8 @@ void draw(){
   strokeWeight(1);
   strokeCap(SQUARE);
 
-  beats.dispButtons();
+  synthe.dispButtons();
   dispWave();
-
-  fill(0);
-  text("BASS", 10, 35);
-  textSize(36);
 }
 
 
@@ -54,9 +51,9 @@ class Beats extends SyntheInterface implements Instrument {
   String pitch;
   boolean[] playable;
 
-  Beats(String pitch){
+  Beats(int height, String pitch){
     //親クラスのコンストラクタ
-    super(16, 50, 20);
+    super(height, 16, 50, 20);
 
     this.pitch = pitch;
     playable = new boolean[beat];
@@ -66,6 +63,7 @@ class Beats extends SyntheInterface implements Instrument {
     
   }
 
+  //Interface実装
   void noteOn(float duration){
     playable[count] = (buttonTrigger[count])?true:false;
     if(playable[count]) out.playNote(0, 0.25, new Synthe(pitch));
@@ -86,30 +84,31 @@ class Synthe implements Instrument {
 
   Synthe(String pitch) {
     sineWave = new Oscil(Frequency.ofPitch(pitch), 1, Waves.TRIANGLE);
-    sqWave = new Oscil(30.0, 0.4, Waves.SAW);
+    // sqWave = new Oscil(30.0, 0.4, Waves.SAW);
   }
 
   void noteOn(float duration){
     sineWave.patch(out);
-    sqWave.patch(out);
+    // sqWave.patch(out);
   }
   
   void noteOff(){
     sineWave.unpatch(out);
-    sqWave.unpatch(out);
+    // sqWave.unpatch(out);
   }
 }
 
 
 class SyntheInterface{
-  int button_width, button_num, margin, button_margin;
+  int button_width, button_height, button_num, margin, button_margin;
   boolean[] buttonTrigger;
   PVector[][] button_pos;
 
-  SyntheInterface(int button_num, int margin, int button_margin){
+  SyntheInterface(int button_height, int button_num, int margin, int button_margin){
     buttonTrigger = new boolean[beat];
 
     button_width = (displayWidth-(margin*2)-(button_margin*(button_num-1)))/button_num;
+    this.button_height = button_height;
     this.button_num = button_num;
     this.margin = margin;
     this.button_margin = button_margin;
@@ -121,12 +120,14 @@ class SyntheInterface{
 
   void calcButtonPos() { 
     button_pos = new PVector[button_num][4];
+    println("Hi");
 
     for(int i = 0; i < button_num; i++) {      
-      button_pos[i][0] =  new PVector(margin + i * (button_width + button_margin), displayHeight/2);
-      button_pos[i][1] =  new PVector(margin + i * (button_width + button_margin) + button_width, displayHeight/2);
-      button_pos[i][2] =  new PVector(margin + i * (button_width + button_margin) + button_width, displayHeight/2 + button_width);
-      button_pos[i][3] =  new PVector(margin + i * (button_width + button_margin), displayHeight/2 + button_width);
+      button_pos[i][0] =  new PVector(margin + i * (button_width + button_margin), button_height);
+      button_pos[i][1] =  new PVector(margin + i * (button_width + button_margin) + button_width, button_height);
+      button_pos[i][2] =  new PVector(margin + i * (button_width + button_margin) + button_width, button_height + button_width);
+      button_pos[i][3] =  new PVector(margin + i * (button_width + button_margin), button_height + button_width);
+      // println(button_pos[i]);
     }
   }
 
@@ -147,8 +148,41 @@ class SyntheInterface{
   }
 }
 
+class Synthesizer {
+  int soundNum;
+
+  Synthesizer() {
+    soundNum = 5;
+    beats = new Beats[soundNum];
+    // pitchList = new String[soundNum]; 
+  }
+
+  void setSyntheSounds() {
+    for(int i = 0;  i < soundNum; i++){
+      
+      beats[i] = new Beats(displayHeight-(i*100)-100, pitchList[i]);
+      beats[i].calcButtonPos();
+      beats[i].dispButtons();
+
+      out.playNote(0, 0.25, beats[i]);
+    }
+  }
+
+  void clickImp() {
+    for(int i = 0;  i < soundNum; i++) {
+      beats[i].getClick();
+    }
+  }
+
+  void dispButtons() {
+    for(int i = 0;  i < soundNum; i++) {
+      beats[i].dispButtons();
+    }
+  }
+}
+
 void mousePressed() {
-  beats.getClick();
+  synthe.clickImp();
 }
 
 void dispWave(){
